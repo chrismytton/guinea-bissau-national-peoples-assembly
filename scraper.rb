@@ -39,7 +39,7 @@ def scrape_list(url)
         area: person_matches[:area],
         source: original_url
       }
-      ScraperWiki.save_sqlite([:name, :party_id], data)
+      ScraperWiki.save_sqlite([:name, :party_id, :area_id], data)
     end
   end
 end
