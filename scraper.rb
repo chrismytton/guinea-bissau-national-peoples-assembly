@@ -26,7 +26,7 @@ def scrape_list(url)
     party_matches = party.text.match(/^(?<party>.*?) \((?<party_id>.*?)\)$/)
     people = party.xpath('following::ol[1]/li')
     people.each do |person|
-      person_matches = person.text.match(/^(?<name>.*?) \(círculo (?<circulo>\d+?), (?<area>.*?), (?<regiao>.*?)\)$/)
+      person_matches = person.text.match(/^(?<name>.*?) ?\(círculo (?<circulo>\d+?), (?<area>.*?), (?<regiao>.*?)\)$/)
       next if person_matches.nil?
       area_id = "ocd-division/country:gw/" \
         "região:#{extract_regiao(person_matches[:regiao])}/" \
