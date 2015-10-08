@@ -1,25 +1,50 @@
-# This is a template for a Ruby scraper on morph.io (https://morph.io)
-# including some code snippets below that you should find helpful
+#!/usr/bin/env ruby
+# encoding: utf-8
 
-# require 'scraperwiki'
-# require 'mechanize'
-#
-# agent = Mechanize.new
-#
-# # Read in a page
-# page = agent.get("http://foo.com")
-#
-# # Find somehing on the page using css selectors
-# p page.at('div.content')
-#
-# # Write out to the sqlite database using scraperwiki library
-# ScraperWiki.save_sqlite(["name"], {"name" => "susan", "occupation" => "software developer"})
-#
-# # An arbitrary query against the database
-# ScraperWiki.select("* from data where 'name'='peter'")
+require 'scraperwiki'
+require 'nokogiri'
+require 'open-uri'
 
-# You don't have to do things with the Mechanize or ScraperWiki libraries.
-# You can use whatever gems you want: https://morph.io/documentation/ruby
-# All that matters is that your final data is written to an SQLite database
-# called "data.sqlite" in the current working directory which has at least a table
-# called "data".
+require 'pry'
+# require 'open-uri/cached'
+# OpenURI::Cache.cache_path = '.cache'
+
+def noko_for(url)
+  Nokogiri::HTML(open(url).read)
+end
+
+def extract_regiao(regiao)
+  return regiao unless regiao.start_with?('Região de')
+  regiao.gsub('Região de ', '')
+end
+
+def scrape_list(url)
+  original_url = 'http://www.gbissau.com/?page_id=11253'
+  noko = noko_for(url)
+  parties = noko.css('div.entry p span')
+  parties.each do |party|
+    party_matches = party.text.match(/^(?<party>.*?) \((?<party_id>.*?)\)$/)
+    people = party.xpath('following::ol[1]/li')
+    people.each do |person|
+      person_matches = person.text.match(/^(?<name>.*?) \(círculo (?<circulo>\d+?), (?<area>.*?), (?<regiao>.*?)\)$/)
+      next if person_matches.nil?
+      area_id = "ocd-division/country:gw/" \
+        "região:#{extract_regiao(person_matches[:regiao])}/" \
+        "círculo:#{person_matches[:circulo]}"
+      data = {
+        name: person_matches[:name],
+        party_id: party_matches[:party_id],
+        party: party_matches[:party],
+        area_id: area_id.downcase,
+        area: person_matches[:area],
+        source: original_url
+      }
+      ScraperWiki.save_sqlite([:name, :party_id], data)
+    end
+  end
+end
+
+# Website doesn't work directly due to Incapsula bot blocking
+# scrape_list('http://www.gbissau.com/?page_id=11253')
+
+scrape_list('gbissau-members.html')
