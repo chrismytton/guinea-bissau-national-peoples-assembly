@@ -4,6 +4,8 @@
 require 'scraperwiki'
 require 'nokogiri'
 require 'open-uri'
+require 'active_support'
+require 'active_support/core_ext/string'
 
 require 'pry'
 # require 'open-uri/cached'
@@ -19,6 +21,7 @@ def extract_regiao(regiao)
 end
 
 def scrape_list(url)
+  seen_ids = []
   original_url = 'http://www.gbissau.com/?page_id=11253'
   noko = noko_for(url)
   parties = noko.css('div.entry p span')
@@ -31,7 +34,13 @@ def scrape_list(url)
       area_id = "ocd-division/country:gw/" \
         "região:#{extract_regiao(person_matches[:regiao])}/" \
         "círculo:#{person_matches[:circulo]}"
+      id = person_matches[:name].parameterize
+      if seen_ids.include?(id)
+        id = "#{id}-1"
+      end
+      seen_ids << id
       data = {
+        id: id,
         name: person_matches[:name],
         party_id: party_matches[:party_id],
         party: party_matches[:party],
@@ -39,7 +48,7 @@ def scrape_list(url)
         area: person_matches[:area],
         source: original_url
       }
-      ScraperWiki.save_sqlite([:name, :party_id, :area_id], data)
+      ScraperWiki.save_sqlite([:id], data)
     end
   end
 end
